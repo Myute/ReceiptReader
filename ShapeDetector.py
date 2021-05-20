@@ -15,6 +15,9 @@
 
 import cv2
 import numpy as np
+import deskew
+from typing import Tuple, Union
+import math
 
 def getReadable(img, width, height,showImages=False):
     myImg = img.copy()
@@ -93,6 +96,28 @@ def warpImage(img, points, w, h, showImages):
         
     return warped
 
+# attempts to do final rotations of image to correct slanted text
+def correctSkew(originalImg):
+    img = originalImg.copy()
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    ang = deskew.determine_skew(gray)
+    rotated = rotate(img,ang,(0,0,0))
+
+    return rotated
+
+# function taken from https://libraries.io/pypi/deskew
+def rotate(image: np.ndarray, angle: float, background: Union[int, Tuple[int, int, int]]) -> np.ndarray:
+    old_width, old_height = image.shape[:2]
+    angle_radian = math.radians(angle)
+    width = abs(np.sin(angle_radian) * old_height) + abs(np.cos(angle_radian) * old_width)
+    height = abs(np.sin(angle_radian) * old_width) + abs(np.cos(angle_radian) * old_height)
+
+    image_center = tuple(np.array(image.shape[1::-1]) / 2)
+    rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+    rot_mat[1, 2] += (width - old_width) / 2
+    rot_mat[0, 2] += (height - old_height) / 2
+    return cv2.warpAffine(image, rot_mat, (int(round(height)), int(round(width))), borderValue=background)
+
 def getScaleRatio(img):
     minsize = 600
     # if #rows (height) > #cols (width)
@@ -101,5 +126,9 @@ def getScaleRatio(img):
 
 def cleanImage(img,showImages=False):
     cleaned = img.copy()
+    cleaned = correctSkew(img)
     # this doesnt do anything right now
+    if showImages:
+        cv2.imshow('Cleaned Image', cleaned)
+        cv2.waitKey(0)
     return cleaned

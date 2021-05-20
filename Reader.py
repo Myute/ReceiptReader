@@ -12,21 +12,27 @@
 #############################################
 
 import sys
+from warnings import showwarning
 import ShapeDetector as sd
 import Parser as p
 import cv2
 import pytesseract
 import re
+import json
+import os
+
 
 def read(img,debug):
-    pricepattern = r'^\S*\$*\d*\.\d{2}'     # for separating prices into separate list
-    prices = []
-    words = []
+    pricepattern = r'^\S*\$*\d*(\.|,)\d{2}$' # for separating prices into separate list
+    prices = []                             # we dont check for letters inside the price regex to
+    words = []                              # avoid losing prices when numbers are recognized as letters
+                                            # , is a brute force way to avoid losing data due to . being
+                                            # recognized as ,
     priceColor=(255,0,0)
     wordColor=(0,0,255)
 
     readable = sd.getReadable(img,600,600,showImages=debug) # attempts to dewarp/transform image for better text recognition
-    readable = sd.cleanImage(readable)                      # further processing
+    readable = sd.cleanImage(readable,showImages=debug)                      # further processing
     boxes=pytesseract.image_to_data(readable)               # read image text with pytesseract
 
     for x,b in enumerate(boxes.splitlines()):               # create 2 lists containing read text along with coordinates on image
@@ -49,6 +55,25 @@ def read(img,debug):
 
     return words,prices
 
+def list2Dict(l):
+    d = {}
+    for i in l:
+        d.update({i[0]:i[1]})
+    return d
+
+def toJSON(l1, l2, name):
+    d1 = list2Dict(l1)
+    d2 = list2Dict(l2)
+    outDict = {'Billing Information':d1,'Charges':d2}
+    jsonStr = json.dumps(outDict)
+
+    print(jsonStr)
+
+    f = open("Output/"+name,'w')
+    f.write(jsonStr)
+    f.close()
+    return
+
 def main():
     if len(sys.argv) < 1:   # make sure we have arguments, does not check if valid filepath
         print("No receipts were specified to be read.")
@@ -70,5 +95,7 @@ def main():
 
     print(word_res)                         # print output, this needs to be in a different format
     print(price_res)
+
+    toJSON(word_res,price_res, (os.path.splitext(os.path.basename(path))[0]+'.txt'))
 
 main()

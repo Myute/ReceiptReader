@@ -25,10 +25,13 @@ def findItems(words,prices):
 
 def findKeyWords(words,prices):
     # regex patterns
-    patterns = [r'(?i)balance', r'(?i)subtotal', r'(?i)tax', r'(?i)total',r'(?i)change']
+    patterns = [r'(?i)balance', r'(?i)subtotal', r'(?i)tax', r'(?i)total',r'(?i)change', r'(?i)tax total']
+    keyname = ['BALANCE','SUBTOTAL','TAX','TOTAL','CHANGE','TAX TOTAL']
     results = []
+    patternnum=-1
     for p in patterns:
         index = 0
+        patternnum +=1
         for x in words:
             price = ''
             if re.findall(p,x[11]):
@@ -36,10 +39,11 @@ def findKeyWords(words,prices):
                 price = findFromList(key, prices)
                 words.pop(index)
                 if price != '':
-                    results.append([key[11],price])
+                    results.append([keyname[patternnum],price])
                 break
             else:
                 index += 1
+
     return results
 
 def findFromList(key,list):
